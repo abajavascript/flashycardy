@@ -1,0 +1,95 @@
+---
+description: Enforces data fetching via Server Components, mutations via Server Actions, and Zod validation
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: true
+---
+
+> NOTE: This rule file was generated or updated by the `/rules-architect` command.
+
+# Data Patterns — Fetching, Mutations & Validation
+
+## Data Retrieval — Server Components Only
+
+All data fetching must happen inside **Server Components**. Never fetch data in Client Components directly (e.g. via `useEffect` + `fetch`).
+
+```tsx
+// ✅ GOOD — fetch data in a Server Component
+export default async function DecksPage() {
+  const decks = await db.select().from(decksTable).where(...)
+  return <DeckList decks={decks} />
+}
+
+// ❌ BAD — fetching inside a Client Component
+"use client"
+export default function DecksPage() {
+  const [decks, setDecks] = useState([])
+  useEffect(() => {
+    fetch("/api/decks").then(r => r.json()).then(setDecks)
+  }, [])
+  return <DeckList decks={decks} />
+}
+```
+
+## Mutations — Server Actions Only
+
+All database inserts, updates, and deletes must be performed inside **Server Actions** (functions marked with `"use server"`). Never mutate data from Client Components via direct API calls or route handlers.
+
+```ts
+// ✅ GOOD — Server Action for creating a deck
+"use server"
+import { auth } from "@clerk/nextjs/server"
+import { db } from "@/db"
+import { decksTable } from "@/db/schema"
+import { z } from "zod"
+
+const CreateDeckSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+})
+
+type CreateDeckInput = z.infer<typeof CreateDeckSchema>
+
+export async function createDeck(input: CreateDeckInput) {
+  const { userId } = await auth()
+  if (!userId) throw new Error("Unauthorized")
+
+  const parsed = CreateDeckSchema.parse(input)
+
+  await db.insert(decksTable).values({ userId, ...parsed })
+}
+
+// ❌ BAD — mutating via a route handler called from the client
+export async function POST(req: Request) {
+  const body = await req.json()
+  await db.insert(decksTable).values(body) // ❌ no auth, no validation
+}
+```
+
+## Validation — Zod Required for All Server Action Inputs
+
+- **Always** define a Zod schema for every piece of data passed into a Server Action.
+- **Always** call `.parse()` or `.safeParse()` on the input before using it.
+- **Always** export a TypeScript type derived from the schema via `z.infer<typeof Schema>`.
+- **Never** accept `FormData` as the parameter type for Server Actions — convert it to a typed object first or accept a plain typed object directly.
+
+```ts
+// ✅ GOOD — typed input with Zod validation
+const UpdateCardSchema = z.object({
+  id: z.number().int().positive(),
+  front: z.string().min(1),
+  back: z.string().min(1),
+})
+
+type UpdateCardInput = z.infer<typeof UpdateCardSchema>
+
+export async function updateCard(input: UpdateCardInput) {
+  const parsed = UpdateCardSchema.parse(input)
+  await db.update(cardsTable).set({ front: parsed.front, back: parsed.back })
+    .where(eq(cardsTable.id, parsed.id))
+}
+
+// ❌ BAD — untyped FormData parameter
+export async function updateCard(formData: FormData) {
+  const front = formData.get("front") as string // ❌ no validation, wrong type
+}
+```

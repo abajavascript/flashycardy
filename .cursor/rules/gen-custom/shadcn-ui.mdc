@@ -1,0 +1,51 @@
+---
+description: Enforces use of shadcn/ui for all UI elements in this project
+globs: ["**/*.tsx", "**/*.ts", "**/*.jsx", "**/*.js"]
+alwaysApply: true
+---
+
+> NOTE: This rule file was generated or updated by the `/rules-architect` command.
+
+# shadcn/ui UI Components
+
+This project uses **shadcn/ui** for all UI elements. Never use raw HTML elements or third-party component libraries when a shadcn/ui equivalent exists.
+
+## Setup
+
+If shadcn/ui is not yet initialized in the project, run:
+
+```bash
+npx shadcn@latest init
+```
+
+## Adding Components
+
+If a required component is not installed, add it before using it:
+
+```bash
+npx shadcn@latest add <component-name>
+```
+
+Example — adding the Button component:
+
+```bash
+npx shadcn@latest add button
+```
+
+Components are installed into `src/components/ui/`.
+
+## Usage Rules
+
+- **Always** prefer shadcn/ui components over native HTML elements for interactive UI (buttons, inputs, dialogs, cards, etc.).
+- **Never** install separate UI libraries (e.g. MUI, Ant Design, Chakra) for components already available in shadcn/ui.
+- Import components from `@/components/ui/<component>`.
+
+```tsx
+// ✅ GOOD
+import { Button } from "@/components/ui/button"
+
+<Button variant="outline">Click me</Button>
+
+// ❌ BAD
+<button className="...">Click me</button>
+```

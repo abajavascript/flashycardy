@@ -1,0 +1,106 @@
+---
+description: Enforces Clerk authentication and user data isolation for all routes and data access
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: true
+---
+
+> NOTE: This rule file was generated or updated by the `/rules-architect` command.
+
+# Clerk Authentication & Data Isolation
+
+All authentication in this project is handled by **Clerk**. Users must only ever be able to access their own data. Never trust client-supplied user IDs — always derive the authenticated user's ID from Clerk on the server side.
+
+## Getting the Current User
+
+### In Server Components and Route Handlers (App Router)
+
+```ts
+import { auth } from "@clerk/nextjs/server";
+
+const { userId } = await auth();
+
+if (!userId) {
+  // User is not authenticated — redirect or return 401
+}
+```
+
+### In Client Components
+
+```tsx
+import { useAuth } from "@clerk/nextjs";
+
+const { userId } = useAuth();
+```
+
+## Data Access Rules
+
+- **Always** retrieve `userId` from Clerk (`auth()` on the server, `useAuth()` on the client) — never accept it as a parameter, query string, or request body value.
+- **Always** filter database queries by the authenticated `userId` to ensure users can only read or modify their own records.
+- **Never** expose data belonging to other users, even if the caller supplies a valid-looking ID.
+- **Never** skip the authentication check — all API routes and Server Actions that access user data must verify the user is signed in first.
+
+## Examples
+
+```ts
+// ✅ GOOD — Server Action: create a deck scoped to the authenticated user
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/db";
+import { decksTable } from "@/db/schema";
+
+export async function createDeck(name: string, description: string) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  await db.insert(decksTable).values({ userId, name, description });
+}
+
+// ✅ GOOD — Route Handler: fetch only the current user's decks
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/db";
+import { decksTable } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const { userId } = await auth();
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const decks = await db
+    .select()
+    .from(decksTable)
+    .where(eq(decksTable.userId, userId));
+
+  return NextResponse.json(decks);
+}
+
+// ❌ BAD — trusting a user-supplied ID from the request body
+export async function POST(req: Request) {
+  const { userId, name } = await req.json(); // ❌ never trust this
+  await db.insert(decksTable).values({ userId, name });
+}
+
+// ❌ BAD — fetching all decks without filtering by user
+const allDecks = await db.select().from(decksTable); // ❌ exposes every user's data
+```
+
+## Middleware
+
+Ensure `proxy.ts` is configured to protect routes using Clerk's `clerkMiddleware`:
+
+```ts
+// proxy.ts
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+
+const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"]);
+
+export default clerkMiddleware(async (auth, req) => {
+  if (!isPublicRoute(req)) {
+    await auth.protect();
+  }
+});
+
+export const config = {
+  matcher: ["/((?!_next|.*\\..*).*)"],
+};
+```

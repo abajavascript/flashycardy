@@ -1,0 +1,66 @@
+---
+description: Enforces use of Drizzle ORM schema and queries for all database interactions
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: true
+---
+
+> NOTE: This rule file was generated or updated by the `/rules-architect` command.
+
+# Drizzle ORM — Database Interactions
+
+All database interactions in this project must use **Drizzle ORM** with the defined schema. Never use raw SQL strings, other ORMs, or direct database client calls.
+
+## Schema Location
+
+The schema is defined in `src/db/schema.ts` and exports the following tables:
+
+- `decksTable` — stores flashcard decks (fields: `id`, `userId`, `name`, `description`, `createdAt`, `updatedAt`)
+- `cardsTable` — stores individual cards linked to a deck (fields: `id`, `deckId`, `front`, `back`, `createdAt`, `updatedAt`)
+
+Always import tables from `@/db/schema`.
+
+## Query Rules
+
+- **Always** use Drizzle's query builder (`db.select()`, `db.insert()`, `db.update()`, `db.delete()`) or the relational query API (`db.query.*`).
+- **Never** write raw SQL strings via `sql\`...\`` unless there is no Drizzle equivalent — and even then, add a comment explaining why.
+- **Never** use other ORMs (Prisma, TypeORM, Sequelize, etc.).
+- **Never** call the database client (e.g. `pg`, `postgres`) directly for data queries.
+
+## Examples
+
+```ts
+// ✅ GOOD — insert using Drizzle schema
+import { db } from "@/db"
+import { decksTable } from "@/db/schema"
+
+await db.insert(decksTable).values({
+  userId: "user_123",
+  name: "My Deck",
+  description: "A new deck",
+})
+
+// ✅ GOOD — query with filter
+import { eq } from "drizzle-orm"
+
+const decks = await db
+  .select()
+  .from(decksTable)
+  .where(eq(decksTable.userId, "user_123"))
+
+// ❌ BAD — raw SQL
+await client.query("SELECT * FROM decks WHERE user_id = $1", ["user_123"])
+
+// ❌ BAD — direct pg client usage for data access
+const result = await pool.query("INSERT INTO decks ...")
+```
+
+## Migrations
+
+Schema changes must be reflected in migration files managed by Drizzle Kit. Run:
+
+```bash
+npx drizzle-kit generate
+npx drizzle-kit migrate
+```
+
+Never modify the database schema directly without updating `src/db/schema.ts` first.
