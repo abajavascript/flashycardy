@@ -8,7 +8,14 @@ alwaysApply: true
 
 # shadcn/ui UI Components
 
-This project uses **shadcn/ui** for all UI elements. Never use raw HTML elements or third-party component libraries when a shadcn/ui equivalent exists.
+This project uses **shadcn/ui** for ALL UI elements — no exceptions. **Zero custom UI components may be created.** Never use raw HTML elements, custom CSS components, or third-party component libraries. If a shadcn/ui component exists for a use case, it MUST be used.
+
+## ABSOLUTE RULES — Never Violate
+
+- **NEVER** create custom UI components from scratch. Every interactive or visual element must come from shadcn/ui.
+- **NEVER** use raw HTML elements (`<button>`, `<input>`, `<select>`, `<dialog>`, `<card>`, etc.) — always use the shadcn/ui equivalent.
+- **NEVER** install or use other UI libraries (MUI, Ant Design, Chakra UI, Radix UI directly, Headless UI, etc.).
+- **NEVER** write custom className-based styled components as substitutes for shadcn/ui components.
 
 ## Setup
 
@@ -36,8 +43,8 @@ Components are installed into `src/components/ui/`.
 
 ## Usage Rules
 
-- **Always** prefer shadcn/ui components over native HTML elements for interactive UI (buttons, inputs, dialogs, cards, etc.).
-- **Never** install separate UI libraries (e.g. MUI, Ant Design, Chakra) for components already available in shadcn/ui.
+- **Always** use shadcn/ui components for every piece of UI — buttons, inputs, dialogs, cards, forms, dropdowns, toasts, etc.
+- **Always** install the shadcn/ui component first if it isn't already available in `src/components/ui/`.
 - Import components from `@/components/ui/<component>`.
 
 ```tsx

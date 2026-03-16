@@ -1,8 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
-import { decksTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { getDecksForUser } from "@/db/queries/decks";
 import {
   Card,
   CardHeader,
@@ -10,6 +8,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default async function DashboardPage() {
@@ -19,10 +18,7 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const decks = await db
-    .select()
-    .from(decksTable)
-    .where(eq(decksTable.userId, userId));
+  const decks = await getDecksForUser(userId);
 
   return (
     <main className="container mx-auto px-6 py-10">
@@ -37,33 +33,39 @@ export default async function DashboardPage() {
       </div>
 
       {decks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-20 text-center">
-          <p className="text-lg font-medium text-muted-foreground">
-            No decks yet
-          </p>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
-            Create your first deck to get started
-          </p>
-          <Button>Create a Deck</Button>
-        </div>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-lg font-medium text-muted-foreground">
+              No decks yet
+            </p>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">
+              Create your first deck to get started
+            </p>
+            <Button>Create a Deck</Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {decks.map((deck) => (
-            <Card key={deck.id} className="hover:border-primary/50 transition-colors cursor-pointer">
-              <CardHeader>
-                <CardTitle className="truncate">{deck.name}</CardTitle>
-                {deck.description && (
-                  <CardDescription className="line-clamp-2">
-                    {deck.description}
-                  </CardDescription>
-                )}
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground">
-                  Created {new Date(deck.createdAt).toLocaleDateString()}
-                </p>
-              </CardContent>
-            </Card>
+            <Link key={deck.id} href={`/decks/${deck.id}`} className="block">
+              <Card className="hover:border-primary/50 transition-colors h-full">
+                <CardContent>
+                  <div className="mb-2">
+                    <span className="block font-semibold truncate">
+                      {deck.name}
+                    </span>
+                    {deck.description && (
+                      <span className="block text-sm text-muted-foreground line-clamp-2">
+                        {deck.description}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Updated {new Date(deck.updatedAt).toLocaleDateString()}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

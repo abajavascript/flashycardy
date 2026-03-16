@@ -8,60 +8,97 @@ alwaysApply: true
 
 # Data Patterns — Fetching, Mutations & Validation
 
+## Query Helper Functions — `src/db/queries/`
+
+All database logic must be encapsulated in **query helper functions** inside `src/db/queries/`. Server Components and Server Actions must never call Drizzle directly — they must always delegate to a query helper.
+
+- Place read helpers (selects) in `src/db/queries/` with descriptive names (e.g. `getDecksForUser`, `getCardsByDeckId`).
+- Place write helpers (inserts, updates, deletes) in the same directory.
+- Each helper is a plain `async` function that accepts typed parameters and interacts with the database via Drizzle.
+- Query helpers must **not** call `auth()` — authentication and authorization are the responsibility of the Server Component or Server Action that calls them.
+
+```ts
+// ✅ GOOD — src/db/queries/decks.ts
+import { db } from "@/db"
+import { decksTable } from "@/db/schema"
+import { eq } from "drizzle-orm"
+
+export async function getDecksForUser(userId: string) {
+  return db.select().from(decksTable).where(eq(decksTable.userId, userId))
+}
+
+export async function createDeckForUser(userId: string, name: string, description?: string) {
+  return db.insert(decksTable).values({ userId, name, description })
+}
+
+// ❌ BAD — Drizzle called directly inside a Server Component
+export default async function DecksPage() {
+  const decks = await db.select().from(decksTable).where(...) // ❌ bypass query layer
+  return <DeckList decks={decks} />
+}
+```
+
 ## Data Retrieval — Server Components Only
 
-All data fetching must happen inside **Server Components**. Never fetch data in Client Components directly (e.g. via `useEffect` + `fetch`).
+All data fetching must happen inside **Server Components** by calling query helpers from `src/db/queries/`. Never fetch data in Client Components directly (e.g. via `useEffect` + `fetch`).
 
 ```tsx
-// ✅ GOOD — fetch data in a Server Component
+// ✅ GOOD — fetch data in a Server Component via query helper
+import { getDecksForUser } from "@/db/queries/decks";
+import { auth } from "@clerk/nextjs/server";
+
 export default async function DecksPage() {
-  const decks = await db.select().from(decksTable).where(...)
-  return <DeckList decks={decks} />
+  const { userId } = await auth();
+  if (!userId) return null;
+
+  const decks = await getDecksForUser(userId);
+  return <DeckList decks={decks} />;
 }
 
 // ❌ BAD — fetching inside a Client Component
-"use client"
+("use client");
 export default function DecksPage() {
-  const [decks, setDecks] = useState([])
+  const [decks, setDecks] = useState([]);
   useEffect(() => {
-    fetch("/api/decks").then(r => r.json()).then(setDecks)
-  }, [])
-  return <DeckList decks={decks} />
+    fetch("/api/decks")
+      .then((r) => r.json())
+      .then(setDecks);
+  }, []);
+  return <DeckList decks={decks} />;
 }
 ```
 
 ## Mutations — Server Actions Only
 
-All database inserts, updates, and deletes must be performed inside **Server Actions** (functions marked with `"use server"`). Never mutate data from Client Components via direct API calls or route handlers.
+All database inserts, updates, and deletes must be performed inside **Server Actions** (functions marked with `"use server"`) that delegate to query helpers. Never mutate data from Client Components via direct API calls or route handlers.
 
 ```ts
-// ✅ GOOD — Server Action for creating a deck
-"use server"
-import { auth } from "@clerk/nextjs/server"
-import { db } from "@/db"
-import { decksTable } from "@/db/schema"
-import { z } from "zod"
+// ✅ GOOD — Server Action delegates to a query helper
+"use server";
+import { auth } from "@clerk/nextjs/server";
+import { createDeckForUser } from "@/db/queries/decks";
+import { z } from "zod";
 
 const CreateDeckSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-})
+});
 
-type CreateDeckInput = z.infer<typeof CreateDeckSchema>
+type CreateDeckInput = z.infer<typeof CreateDeckSchema>;
 
 export async function createDeck(input: CreateDeckInput) {
-  const { userId } = await auth()
-  if (!userId) throw new Error("Unauthorized")
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
 
-  const parsed = CreateDeckSchema.parse(input)
+  const parsed = CreateDeckSchema.parse(input);
 
-  await db.insert(decksTable).values({ userId, ...parsed })
+  await createDeckForUser(userId, parsed.name, parsed.description);
 }
 
 // ❌ BAD — mutating via a route handler called from the client
 export async function POST(req: Request) {
-  const body = await req.json()
-  await db.insert(decksTable).values(body) // ❌ no auth, no validation
+  const body = await req.json();
+  await db.insert(decksTable).values(body); // ❌ no auth, no validation, bypasses query layer
 }
 ```
 
@@ -73,23 +110,24 @@ export async function POST(req: Request) {
 - **Never** accept `FormData` as the parameter type for Server Actions — convert it to a typed object first or accept a plain typed object directly.
 
 ```ts
-// ✅ GOOD — typed input with Zod validation
+// ✅ GOOD — typed input with Zod validation, delegates to query helper
+import { updateCardById } from "@/db/queries/cards";
+
 const UpdateCardSchema = z.object({
   id: z.number().int().positive(),
   front: z.string().min(1),
   back: z.string().min(1),
-})
+});
 
-type UpdateCardInput = z.infer<typeof UpdateCardSchema>
+type UpdateCardInput = z.infer<typeof UpdateCardSchema>;
 
 export async function updateCard(input: UpdateCardInput) {
-  const parsed = UpdateCardSchema.parse(input)
-  await db.update(cardsTable).set({ front: parsed.front, back: parsed.back })
-    .where(eq(cardsTable.id, parsed.id))
+  const parsed = UpdateCardSchema.parse(input);
+  await updateCardById(parsed.id, { front: parsed.front, back: parsed.back });
 }
 
 // ❌ BAD — untyped FormData parameter
 export async function updateCard(formData: FormData) {
-  const front = formData.get("front") as string // ❌ no validation, wrong type
+  const front = formData.get("front") as string; // ❌ no validation, wrong type
 }
 ```
