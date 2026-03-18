@@ -10,8 +10,12 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { AddCardDialog } from "./add-card-dialog";
 import { EditDeckDialog } from "./edit-deck-dialog";
+import { DeleteDeckDialog } from "./delete-deck-dialog";
+import { EditCardDialog } from "./edit-card-dialog";
+import { DeleteCardDialog } from "./delete-card-dialog";
 
 interface DeckPageProps {
   params: Promise<{ deckId: string }>;
@@ -75,18 +79,28 @@ export default async function DeckPage({ params }: DeckPageProps) {
               </p>
             </div>
           </div>
-          <EditDeckDialog
-            deckId={deckIdNum}
-            initialName={deck.name}
-            initialDescription={deck.description}
-          />
+          <div className="flex items-center gap-2">
+            <EditDeckDialog
+              deckId={deckIdNum}
+              initialName={deck.name}
+              initialDescription={deck.description}
+            />
+            <DeleteDeckDialog deckId={deckIdNum} deckName={deck.name} />
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
             {cards.length} {cards.length === 1 ? "card" : "cards"}
           </p>
-          <AddCardDialog deckId={deckIdNum} />
+          <div className="flex items-center gap-2">
+            {cards.length > 0 && (
+              <Link href={`/decks/${deckIdNum}/study`}>
+                <Button variant="outline">Study</Button>
+              </Link>
+            )}
+            <AddCardDialog deckId={deckIdNum} />
+          </div>
         </div>
       </div>
 
@@ -107,12 +121,25 @@ export default async function DeckPage({ params }: DeckPageProps) {
           {cards.map((card) => (
             <Card key={card.id}>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Front
-                </CardTitle>
-                <CardDescription className="text-base text-foreground">
-                  {card.front}
-                </CardDescription>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                      Front
+                    </CardTitle>
+                    <CardDescription className="text-base text-foreground">
+                      {card.front}
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <EditCardDialog
+                      cardId={card.id}
+                      deckId={deckIdNum}
+                      initialFront={card.front}
+                      initialBack={card.back}
+                    />
+                    <DeleteCardDialog cardId={card.id} deckId={deckIdNum} />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="border-t pt-3">
                 <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1">

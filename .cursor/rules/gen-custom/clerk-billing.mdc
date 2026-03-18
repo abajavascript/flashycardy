@@ -1,0 +1,136 @@
+---
+description: Enforces correct usage of Clerk Billing for subscriptions, plan gating, and feature access
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: true
+---
+
+> NOTE: This rule file was generated or updated by the `/rules-architect` command.
+
+# Clerk Billing — Subscriptions, Plans & Feature Access
+
+All subscription and payment logic in this project is handled by **Clerk Billing**. Never use Stripe directly, never roll custom billing logic, and never trust client-supplied plan or feature data.
+
+## Available Plans
+
+The following plan slugs are defined in the Clerk Dashboard and must be used exactly as shown:
+
+| Slug | Description |
+|---|---|
+| `free_user` | Default free tier |
+| `pro` | Paid pro tier |
+
+## Available Features
+
+The following feature slugs are defined in the Clerk Dashboard:
+
+| Slug | Description |
+|---|---|
+| `3_deck_limit` | User is limited to 3 decks (free tier) |
+| `unlimited_decks` | User can create unlimited decks (pro) |
+| `ai_flashcard_generation` | User can generate flashcards with AI (pro) |
+
+## Checking Access — Server Side with `has()`
+
+Use the `has()` helper from the Clerk `auth()` object in Server Components and Server Actions. **Never** check plans or features on the client side for access control decisions.
+
+```ts
+import { auth } from "@clerk/nextjs/server"
+
+// Check by plan
+const { has } = await auth()
+const isProUser = has({ plan: "pro" })
+
+// Check by feature
+const canUseAI = has({ feature: "ai_flashcard_generation" })
+const hasUnlimitedDecks = has({ feature: "unlimited_decks" })
+```
+
+### Example: Gate a Server Action by plan
+
+```ts
+// ✅ GOOD — Server Action checks plan before proceeding
+"use server"
+import { auth } from "@clerk/nextjs/server"
+
+export async function generateAIFlashcards(deckId: number) {
+  const { has } = await auth()
+  if (!has({ feature: "ai_flashcard_generation" })) {
+    throw new Error("AI flashcard generation requires a Pro plan.")
+  }
+  // ... generation logic
+}
+```
+
+### Example: Gate a Server Action by deck count (free tier limit)
+
+```ts
+// ✅ GOOD — enforce 3-deck limit for free users
+"use server"
+import { auth } from "@clerk/nextjs/server"
+import { getDecksForUser } from "@/db/queries/decks"
+
+export async function createDeck(input: CreateDeckInput) {
+  const { userId, has } = await auth()
+  if (!userId) throw new Error("Unauthorized")
+
+  const hasFreeLimit = has({ feature: "3_deck_limit" })
+  if (hasFreeLimit) {
+    const existing = await getDecksForUser(userId)
+    if (existing.length >= 3) {
+      throw new Error("Free plan is limited to 3 decks. Upgrade to Pro for unlimited decks.")
+    }
+  }
+
+  // ... create deck
+}
+```
+
+## Checking Access — Client Side with `<Show>`
+
+Use the `<Show>` component from `@clerk/nextjs` to conditionally render UI elements. This is safe for **UI-only** gating (hiding buttons, banners, etc.) but must never be the sole access control — always enforce on the server too.
+
+```tsx
+import { Show } from "@clerk/nextjs"
+
+// Show upgrade prompt to free users
+<Show
+  when={{ plan: "pro" }}
+  fallback={<p>Upgrade to Pro to unlock unlimited decks.</p>}
+>
+  <CreateDeckButton />
+</Show>
+
+// Show AI generation button only to users with the feature
+<Show
+  when={{ feature: "ai_flashcard_generation" }}
+  fallback={<p>AI generation is a Pro feature.</p>}
+>
+  <GenerateWithAIButton />
+</Show>
+```
+
+## Pricing Page
+
+Use the `<PricingTable />` component from `@clerk/nextjs` to display plans. Place it on a dedicated `/pricing` page.
+
+```tsx
+// app/pricing/page.tsx
+import { PricingTable } from "@clerk/nextjs"
+
+export default function PricingPage() {
+  return (
+    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 1rem" }}>
+      <PricingTable />
+    </div>
+  )
+}
+```
+
+## Rules Summary
+
+- **Always** use `has({ plan: "..." })` or `has({ feature: "..." })` — never hardcode plan logic.
+- **Always** enforce billing checks on the **server** (Server Components or Server Actions) for any real access control.
+- **Never** use `<Show>` as the only gate for protected functionality — it is UI-only.
+- **Never** accept plan or feature information as input from the client.
+- **Never** use Stripe APIs directly — all billing flows go through Clerk.
+- **Always** use the exact plan and feature slugs listed above.

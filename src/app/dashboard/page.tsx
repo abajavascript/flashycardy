@@ -9,7 +9,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { CreateDeckDialog } from "./create-deck-dialog";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -29,7 +29,7 @@ export default async function DashboardPage() {
             Manage your flashcard decks
           </p>
         </div>
-        <Button>New Deck</Button>
+        <CreateDeckDialog />
       </div>
 
       {decks.length === 0 ? (
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
             <p className="text-sm text-muted-foreground mt-1 mb-4">
               Create your first deck to get started
             </p>
-            <Button>Create a Deck</Button>
+            <CreateDeckDialog triggerLabel="Create a Deck" />
           </CardContent>
         </Card>
       ) : (

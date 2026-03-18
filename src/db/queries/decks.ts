@@ -14,6 +14,14 @@ export async function getDeckById(deckId: number, userId: string) {
   return deck ?? null;
 }
 
+export async function createDeckForUser(
+  userId: string,
+  name: string,
+  description?: string
+) {
+  await db.insert(decksTable).values({ userId, name, description });
+}
+
 export async function updateDeck(
   deckId: number,
   userId: string,
@@ -23,5 +31,11 @@ export async function updateDeck(
   await db
     .update(decksTable)
     .set({ name, description, updatedAt: new Date() })
+    .where(and(eq(decksTable.id, deckId), eq(decksTable.userId, userId)));
+}
+
+export async function deleteDeck(deckId: number, userId: string) {
+  await db
+    .delete(decksTable)
     .where(and(eq(decksTable.id, deckId), eq(decksTable.userId, userId)));
 }
