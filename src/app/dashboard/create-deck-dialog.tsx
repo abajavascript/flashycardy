@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,11 +19,13 @@ import { createDeck } from "./actions";
 interface CreateDeckDialogProps {
   triggerLabel?: string;
   triggerVariant?: React.ComponentProps<typeof Button>["variant"];
+  isAtLimit?: boolean;
 }
 
 export function CreateDeckDialog({
   triggerLabel = "New Deck",
   triggerVariant,
+  isAtLimit = false,
 }: CreateDeckDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -52,10 +55,20 @@ export function CreateDeckDialog({
           description: description.trim() || undefined,
         });
         setOpen(false);
-      } catch {
-        setError("Something went wrong. Please try again.");
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Something went wrong. Please try again."
+        );
       }
     });
+  }
+
+  if (isAtLimit) {
+    return (
+      <Button variant={triggerVariant} nativeButton={false} render={<Link href="/pricing" />}>
+        {triggerLabel === "New Deck" ? "Upgrade to Pro" : triggerLabel}
+      </Button>
+    );
   }
 
   return (

@@ -12,13 +12,14 @@ import Link from "next/link";
 import { CreateDeckDialog } from "./create-deck-dialog";
 
 export default async function DashboardPage() {
-  const { userId } = await auth();
+  const { userId, has } = await auth();
 
   if (!userId) {
     redirect("/");
   }
 
   const decks = await getDecksForUser(userId);
+  const isAtLimit = has({ feature: "3_deck_limit" }) && decks.length >= 3;
 
   return (
     <main className="container mx-auto px-6 py-10">
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
             Manage your flashcard decks
           </p>
         </div>
-        <CreateDeckDialog />
+        <CreateDeckDialog isAtLimit={isAtLimit} />
       </div>
 
       {decks.length === 0 ? (
@@ -41,7 +42,7 @@ export default async function DashboardPage() {
             <p className="text-sm text-muted-foreground mt-1 mb-4">
               Create your first deck to get started
             </p>
-            <CreateDeckDialog triggerLabel="Create a Deck" />
+            <CreateDeckDialog triggerLabel="Create a Deck" isAtLimit={isAtLimit} />
           </CardContent>
         </Card>
       ) : (
