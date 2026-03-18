@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDeckById, updateDeck, deleteDeck } from "@/db/queries/decks";
-import { createCard, updateCard, deleteCard } from "@/db/queries/cards";
+import { createCard, createCards, updateCard, deleteCard } from "@/db/queries/cards";
 
 const AddCardSchema = z.object({
   deckId: z.number().int().positive(),
@@ -27,6 +27,36 @@ export async function addCard(input: AddCardInput) {
   await createCard(parsed.deckId, parsed.front, parsed.back);
 
   revalidatePath(`/decks/${parsed.deckId}`);
+}
+
+const PasteCardsSchema = z.object({
+  deckId: z.number().int().positive(),
+  cards: z
+    .array(
+      z.object({
+        front: z.string().min(1),
+        back: z.string().min(1),
+      })
+    )
+    .min(1, "No valid cards to import"),
+});
+
+type PasteCardsInput = z.infer<typeof PasteCardsSchema>;
+
+export async function pasteCards(input: PasteCardsInput) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const parsed = PasteCardsSchema.parse(input);
+
+  const deck = await getDeckById(parsed.deckId, userId);
+  if (!deck) throw new Error("Deck not found");
+
+  await createCards(parsed.deckId, parsed.cards);
+
+  revalidatePath(`/decks/${parsed.deckId}`);
+
+  return { added: parsed.cards.length };
 }
 
 const UpdateDeckSchema = z.object({

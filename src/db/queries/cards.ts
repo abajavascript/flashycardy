@@ -31,3 +31,13 @@ export async function updateCard(
 export async function deleteCard(cardId: number) {
   return db.delete(cardsTable).where(eq(cardsTable.id, cardId));
 }
+
+export async function createCards(
+  deckId: number,
+  cards: { front: string; back: string }[]
+) {
+  if (cards.length === 0) return;
+  return db
+    .insert(cardsTable)
+    .values(cards.map((c) => ({ deckId, front: c.front, back: c.back })));
+}

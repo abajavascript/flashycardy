@@ -16,6 +16,7 @@ import { EditDeckDialog } from "./edit-deck-dialog";
 import { DeleteDeckDialog } from "./delete-deck-dialog";
 import { EditCardDialog } from "./edit-card-dialog";
 import { DeleteCardDialog } from "./delete-card-dialog";
+import { PasteCardsDialog } from "./paste-cards-dialog";
 
 interface DeckPageProps {
   params: Promise<{ deckId: string }>;
@@ -99,6 +100,7 @@ export default async function DeckPage({ params }: DeckPageProps) {
                 <Button variant="outline">Study</Button>
               </Link>
             )}
+            <PasteCardsDialog deckId={deckIdNum} />
             <AddCardDialog deckId={deckIdNum} />
           </div>
         </div>
