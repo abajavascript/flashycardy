@@ -44,8 +44,12 @@ const PasteCardsSchema = z.object({
 type PasteCardsInput = z.infer<typeof PasteCardsSchema>;
 
 export async function pasteCards(input: PasteCardsInput) {
-  const { userId } = await auth();
+  const { userId, has } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  if (!has({ feature: "ai_flashcard_generation" })) {
+    throw new Error("Paste Cards requires a Pro plan.");
+  }
 
   const parsed = PasteCardsSchema.parse(input);
 

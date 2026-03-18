@@ -23,11 +23,13 @@ interface DeckPageProps {
 }
 
 export default async function DeckPage({ params }: DeckPageProps) {
-  const { userId } = await auth();
+  const { userId, has } = await auth();
 
   if (!userId) {
     redirect("/");
   }
+
+  const canPasteCards = has({ feature: "ai_flashcard_generation" });
 
   const { deckId } = await params;
   const deckIdNum = Number(deckId);
@@ -100,7 +102,15 @@ export default async function DeckPage({ params }: DeckPageProps) {
                 <Button variant="outline">Study</Button>
               </Link>
             )}
-            <PasteCardsDialog deckId={deckIdNum} />
+            {canPasteCards ? (
+              <PasteCardsDialog deckId={deckIdNum} />
+            ) : (
+              <Link href="/pricing">
+                <Button variant="outline" title="Upgrade to Pro to use Paste Cards">
+                  Paste Cards
+                </Button>
+              </Link>
+            )}
             <AddCardDialog deckId={deckIdNum} />
           </div>
         </div>
