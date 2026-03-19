@@ -16,17 +16,20 @@ import { EditDeckDialog } from "./edit-deck-dialog";
 import { DeleteDeckDialog } from "./delete-deck-dialog";
 import { EditCardDialog } from "./edit-card-dialog";
 import { DeleteCardDialog } from "./delete-card-dialog";
+import { PasteCardsDialog } from "./paste-cards-dialog";
 
 interface DeckPageProps {
   params: Promise<{ deckId: string }>;
 }
 
 export default async function DeckPage({ params }: DeckPageProps) {
-  const { userId } = await auth();
+  const { userId, has } = await auth();
 
   if (!userId) {
     redirect("/");
   }
+
+  const canPasteCards = has({ feature: "ai_flashcard_generation" });
 
   const { deckId } = await params;
   const deckIdNum = Number(deckId);
@@ -97,6 +100,15 @@ export default async function DeckPage({ params }: DeckPageProps) {
             {cards.length > 0 && (
               <Link href={`/decks/${deckIdNum}/study`}>
                 <Button variant="outline">Study</Button>
+              </Link>
+            )}
+            {canPasteCards ? (
+              <PasteCardsDialog deckId={deckIdNum} />
+            ) : (
+              <Link href="/pricing">
+                <Button variant="outline" title="Upgrade to Pro to use Paste Cards">
+                  Paste Cards
+                </Button>
               </Link>
             )}
             <AddCardDialog deckId={deckIdNum} />
