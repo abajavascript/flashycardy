@@ -99,14 +99,23 @@ export default async function DeckPage({ params }: DeckPageProps) {
           <div className="flex items-center gap-2">
             {cards.length > 0 && (
               <Link href={`/decks/${deckIdNum}/study`}>
-                <Button variant="outline">Study</Button>
+                <Button
+                  variant="outline"
+                  className="text-red-500 !bg-green-500 hover:bg-green-600 hover:text-red-500"
+                >
+                  Study
+                </Button>
               </Link>
             )}
             {canPasteCards ? (
               <PasteCardsDialog deckId={deckIdNum} />
             ) : (
               <Link href="/pricing">
-                <Button variant="outline" title="Upgrade to Pro to use Paste Cards">
+                <Button
+                  variant="outline"
+                  title="Upgrade to Pro to use Paste Cards"
+                  className="text-yellow-400"
+                >
                   Paste Cards
                 </Button>
               </Link>

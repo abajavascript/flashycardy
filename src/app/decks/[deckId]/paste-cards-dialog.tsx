@@ -114,7 +114,7 @@ export function PasteCardsDialog({ deckId }: PasteCardsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button variant="outline" />}>
+      <DialogTrigger render={<Button variant="outline" className="text-yellow-400" />}>
         Paste Cards
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
