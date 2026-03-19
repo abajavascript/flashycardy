@@ -1,0 +1,38 @@
+src/app/decks/[deckId]/page.tsx
+  ad32f583a3de40f8 117
+src/app/decks/[deckId]/paste-cards-dialog.tsx
+  ad32f583a3de40f8 117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.16",
+  "base_commit_sha": "c6cf0c3dcf861188a5b05982069e4ca55045339b",
+  "prompts": {
+    "1e2c4030b95997c9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "db299ed7-1356-441d-8d54-7e3050f5a56c",
+        "model": "claude-4.6-sonnet-medium-thinking"
+      },
+      "human_author": "ABA JavaScript <abajavascript@gmail.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "ad32f583a3de40f8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "1f515b01-628c-44a3-b122-a38cc4b6ce7e",
+        "model": "claude-4.6-sonnet-medium-thinking"
+      },
+      "human_author": "ABA JavaScript <abajavascript@gmail.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 1,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}
